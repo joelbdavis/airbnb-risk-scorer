@@ -1,0 +1,84 @@
+{
+  "data": {
+    "id": "20a119da-9491-462e-ab85-232072b7c4a2",
+    "code": "HMWCY9FQRT",
+    "platform": "airbnb",
+    "platform_id": "HMWCY9FQRT",
+    "booking_date": "2025-03-22T01:20:40Z",
+    "arrival_date": "2025-05-14T00:00:00-04:00",
+    "departure_date": "2025-05-18T00:00:00-04:00",
+    "check_in": "2025-05-14T16:00:00-04:00",
+    "check_out": "2025-05-18T10:00:00-04:00",
+    "nights": 4,
+    "reservation_status": {
+      "current": {
+        "category": "accepted",
+        "sub_category": null
+      },
+      "history": [
+        {
+          "category": "request",
+          "sub_category": "request to book",
+          "changed_at": "2025-03-21T23:07:27+00:00"
+        },
+        {
+          "category": "accepted",
+          "sub_category": null,
+          "changed_at": "2025-03-22T01:20:41+00:00"
+        },
+        {
+          "category": "request",
+          "sub_category": "request to book",
+          "changed_at": "2025-03-22T01:20:43+00:00"
+        },
+        {
+          "category": "accepted",
+          "sub_category": null,
+          "changed_at": "2025-03-22T01:20:43+00:00"
+        }
+      ]
+    },
+    "conversation_id": "d5790068-fa52-4a73-9753-f4b5d67a533d",
+    "last_message_at": "2025-05-16T21:14:21+00:00",
+    "guests": {
+      "total": 6,
+      "adult_count": 4,
+      "child_count": 1,
+      "infant_count": 1,
+      "pet_count": 0
+    },
+    "guest": {
+      "id": "368436487",
+      "location": "Christiansburg, VA",
+      "profile_picture": "https://a0.muscache.com/im/pictures/user/User-368436487/original/5031a2bc-df41-4691-8d94-db07ee546628.jpeg?aki_policy=profile_x_medium",
+      "email": null,
+      "phone_numbers": ["18644508822"],
+      "first_name": "Taylor",
+      "last_name": "Callaway",
+      "language": "en"
+    },
+    "status": "accepted",
+    "status_history": [
+      {
+        "category": "Pending",
+        "status": "pending",
+        "changed_at": "2025-03-21T23:07:27+00:00"
+      },
+      {
+        "category": "Accepted",
+        "status": "accepted",
+        "changed_at": "2025-03-22T01:20:41+00:00"
+      },
+      {
+        "category": "Pending",
+        "status": "pending",
+        "changed_at": "2025-03-22T01:20:43+00:00"
+      },
+      {
+        "category": "Accepted",
+        "status": "accepted",
+        "changed_at": "2025-03-22T01:20:43+00:00"
+      }
+    ]
+  }
+}

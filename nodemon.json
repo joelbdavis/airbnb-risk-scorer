@@ -1,0 +1,5 @@
+{
+  "watch": ["index.js", "riskScorer.js", "getReservationDetails.js"],
+  "ignore": ["node_modules"],
+  "ext": "js,json"
+}

@@ -1,0 +1,64 @@
+{
+  "data": {
+    "id": "20dc877b-0aaa-489f-9d9f-737b2fbe154f",
+    "code": "HMBH8Y82H9",
+    "platform": "airbnb",
+    "platform_id": "HMBH8Y82H9",
+    "booking_date": "2025-03-15T15:56:12Z",
+    "arrival_date": "2025-05-18T00:00:00-04:00",
+    "departure_date": "2025-05-23T00:00:00-04:00",
+    "check_in": "2025-05-18T16:00:00-04:00",
+    "check_out": "2025-05-23T10:00:00-04:00",
+    "nights": 5,
+    "reservation_status": {
+      "current": {
+        "category": "accepted",
+        "sub_category": null
+      },
+      "history": [
+        {
+          "category": "request",
+          "sub_category": "request to book",
+          "changed_at": "2025-03-15T15:49:30+00:00"
+        },
+        {
+          "category": "accepted",
+          "sub_category": null,
+          "changed_at": "2025-03-15T15:56:13+00:00"
+        }
+      ]
+    },
+    "conversation_id": "4ebc3d41-fce7-49c0-b4fe-fdeac39bb952",
+    "last_message_at": "2025-05-16T20:17:31+00:00",
+    "guests": {
+      "total": 2,
+      "adult_count": 2,
+      "child_count": 0,
+      "infant_count": 0,
+      "pet_count": 1
+    },
+    "guest": {
+      "id": "272789917",
+      "location": null,
+      "profile_picture": "https://a0.muscache.com/im/pictures/user/db2c502e-3959-4699-a69b-2996f537de3d.jpg?aki_policy=profile_x_medium",
+      "email": null,
+      "phone_numbers": ["18658397269"],
+      "first_name": "Matt",
+      "last_name": "Schaefer",
+      "language": "en"
+    },
+    "status": "accepted",
+    "status_history": [
+      {
+        "category": "Pending",
+        "status": "pending",
+        "changed_at": "2025-03-15T15:49:30+00:00"
+      },
+      {
+        "category": "Accepted",
+        "status": "accepted",
+        "changed_at": "2025-03-15T15:56:13+00:00"
+      }
+    ]
+  }
+}
