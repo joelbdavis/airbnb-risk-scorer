@@ -1,6 +1,13 @@
-const fs = require('fs');
-const path = require('path');
-const { calculateRiskScore } = require('../../src/scoring/riskScorer');
+import fs from 'fs';
+import path from 'path';
+import { calculateRiskScore, RiskReport } from '../../src/scoring/riskScorer';
+
+interface ExpectedValues {
+  level: RiskReport['level'];
+  score?: number;
+  rationale?: string[];
+  ruleNames?: string[];
+}
 
 describe('Risk scoring from testPayloads', () => {
   const payloadDir = path.join(__dirname, '../../testPayloads');
@@ -17,30 +24,36 @@ describe('Risk scoring from testPayloads', () => {
       const reservation = getReservationFromTestPayload(payloadDir, base);
       const expected = getExpected(payloadDir, filename, base);
       const riskReport = calculateRiskScore(reservation);
+
       expect(riskReport.level).toEqual(expected.level);
     });
   });
 });
 
-function getReservationFromTestPayload(payloadDir, base) {
+function getReservationFromTestPayload(payloadDir: string, base: string): any {
   const payloadPath = path.join(payloadDir, `${base}.json`);
-
   const wrapper = JSON.parse(fs.readFileSync(payloadPath, 'utf8'));
-  const reservation = wrapper.data || wrapper;
-  return reservation;
+  return wrapper.data || wrapper;
 }
 
-function getExpected(payloadDir, filename, base) {
+function getExpected(
+  payloadDir: string,
+  filename: string,
+  base: string
+): ExpectedValues {
   const expectedPath = path.join(payloadDir, `${base}.expected.json`);
 
   if (!fs.existsSync(expectedPath)) {
     throw new Error(`Missing expected file for ${filename}`);
   }
 
-  const expected = JSON.parse(fs.readFileSync(expectedPath, 'utf8'));
+  const expected = JSON.parse(
+    fs.readFileSync(expectedPath, 'utf8')
+  ) as ExpectedValues;
 
   if (typeof expected.level !== 'string') {
     throw new Error(`Missing or invalid "level" in ${base}.expected.json`);
   }
+
   return expected;
 }

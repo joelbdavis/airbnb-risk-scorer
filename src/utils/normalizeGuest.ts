@@ -1,12 +1,25 @@
-// src/utils/normalizeGuest.js
+export interface NormalizedGuest {
+  id: string | null;
+  name: string;
+  reviewCount: number;
+  tripCount: number;
+  hasNegativeReviews: boolean;
+  profile_picture: boolean;
+  phone_numbers: string[];
+  email: string | null;
+  location: string | null;
+  language: string | null;
+}
 
-function normalizeGuest(reservation) {
+export function normalizeGuest(reservation: any): NormalizedGuest {
   const raw = reservation?.guest || {};
 
   return {
-    // Optional: preserve original guest ID or name for logs
     id: raw.id ?? null,
     name: `${raw.first_name || ''} ${raw.last_name || ''}`.trim(),
+    reviewCount: raw.reviewCount ?? 0,
+    tripCount: raw.tripCount ?? 0,
+    hasNegativeReviews: raw.hasNegativeReviews ?? false,
     profile_picture:
       typeof raw.profile_picture === 'string' &&
       raw.profile_picture.trim() !== '',
@@ -20,12 +33,5 @@ function normalizeGuest(reservation) {
         ? raw.location
         : null,
     language: typeof raw.language === 'string' ? raw.language : null,
-
-    // These are aspirational values that I wish I could get. So I'm going to default them for now in the hopes that I can figure out a way to get them later on.
-    reviewCount: raw.reviewCount ?? 0,
-    tripCount: raw.tripCount ?? 0,
-    hasNegativeReviews: raw.hasNegativeReviews ?? false,
   };
 }
-
-module.exports = { normalizeGuest };
