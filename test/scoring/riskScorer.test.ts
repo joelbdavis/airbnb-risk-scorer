@@ -3,6 +3,7 @@ import { RULE_KEYS } from '../../src/scoring/riskRules';
 import type { RiskReport } from '../../src/scoring/riskScorer';
 import type { RuleKey } from '../../src/scoring/riskRules';
 import type { NormalizedReservation } from '../../src/services/getReservationDetails';
+import { updateConfig, getDefaultConfig } from '../../src/scoring/config';
 
 describe('Risk Scoring Algorithm', () => {
   const baseReservation: NormalizedReservation = {
@@ -53,7 +54,12 @@ describe('Risk Scoring Algorithm', () => {
     },
   };
 
-  it('scores guest with location, profile picture, email, phone number as low risk', () => {
+  beforeEach(() => {
+    // Reset to default configuration before each test
+    updateConfig(getDefaultConfig());
+  });
+
+  it('matches expected rules for low-risk guest', () => {
     const reservation: NormalizedReservation = {
       ...baseReservation,
       guest: {
@@ -66,15 +72,20 @@ describe('Risk Scoring Algorithm', () => {
     };
 
     const report: RiskReport = calculateRiskScore(reservation);
-    expect(report.score).toBe(10); // Only NO_TRIPS rule should match
-    expect(report.level).toBe('low');
-    expect(Array.isArray(report.matchedRules)).toBe(true);
-    const ruleNames: RuleKey[] = report.matchedRules.map((r) => r.name);
+
+    // Only NO_TRIPS should match
+    const ruleNames: RuleKey[] = report.matched_rules.map((r) => r.name);
     expect(ruleNames).toHaveLength(1);
     expect(ruleNames).toContain(RULE_KEYS.NO_TRIPS);
+
+    // Verify score calculation using default weights
+    expect(report.score).toBe(
+      getDefaultConfig().rule_weights[RULE_KEYS.NO_TRIPS].score
+    );
+    expect(report.level).toBe('low');
   });
 
-  it('scores guest with no location, profile picture, email, nor phone number as high risk', () => {
+  it('matches expected rules for high-risk guest', () => {
     const reservation: NormalizedReservation = {
       ...baseReservation,
       guest: {
@@ -87,15 +98,86 @@ describe('Risk Scoring Algorithm', () => {
     };
 
     const report = calculateRiskScore(reservation);
-    expect(report.score).toBe(60);
-    expect(report.level).toBe('high');
-    expect(Array.isArray(report.matchedRules)).toBe(true);
-    expect(report.matchedRules).toHaveLength(5);
-    const ruleNames = report.matchedRules.map((r) => r.name);
+
+    // Should match multiple risk rules
+    const ruleNames = report.matched_rules.map((r) => r.name);
     expect(ruleNames).toContain(RULE_KEYS.MISSING_LOCATION);
     expect(ruleNames).toContain(RULE_KEYS.NO_PROFILE_PICTURE);
     expect(ruleNames).toContain(RULE_KEYS.MISSING_EMAIL);
     expect(ruleNames).toContain(RULE_KEYS.MISSING_PHONE);
     expect(ruleNames).toContain(RULE_KEYS.NO_TRIPS);
+
+    // Verify score matches default weights
+    const expectedScore = Object.entries(getDefaultConfig().rule_weights)
+      .filter(([key]) => ruleNames.includes(key as RuleKey))
+      .reduce((sum, [, weight]) => sum + weight.score, 0);
+
+    expect(report.score).toBe(expectedScore);
+    expect(report.level).toBe('high');
+  });
+
+  it('respects disabled rules', () => {
+    // Disable the NO_TRIPS rule
+    updateConfig({
+      rule_weights: {
+        ...getDefaultConfig().rule_weights,
+        [RULE_KEYS.NO_TRIPS]: {
+          score: 10,
+          enabled: false,
+        },
+      },
+    });
+
+    const reservation: NormalizedReservation = {
+      ...baseReservation,
+      guest: {
+        ...baseReservation.guest,
+        location: 'Christiansburg, VA',
+        profile_picture: true,
+        phone_numbers: ['18644508822'],
+        email: 'test@example.com',
+      },
+    };
+
+    const report = calculateRiskScore(reservation);
+
+    // NO_TRIPS rule should not match since it's disabled
+    const ruleNames = report.matched_rules.map((r) => r.name);
+    expect(ruleNames).toHaveLength(0);
+    expect(report.score).toBe(0);
+    expect(report.level).toBe('low');
+  });
+
+  it('uses custom thresholds', () => {
+    // Set very low thresholds
+    updateConfig({
+      thresholds: {
+        medium: 5,
+        high: 15,
+      },
+    });
+
+    const reservation: NormalizedReservation = {
+      ...baseReservation,
+      guest: {
+        ...baseReservation.guest,
+        location: 'Christiansburg, VA',
+        profile_picture: true,
+        phone_numbers: ['18644508822'],
+        email: null, // This should trigger MISSING_EMAIL (15 points)
+        trip_count: 5, // Avoid NO_TRIPS rule
+        review_count: 3, // Avoid NO_REVIEWS rule
+      },
+    };
+
+    const report = calculateRiskScore(reservation);
+
+    // With default thresholds this would be medium risk,
+    // but with our custom thresholds it should be high
+    expect(report.score).toBe(
+      getDefaultConfig().rule_weights[RULE_KEYS.MISSING_EMAIL].score
+    );
+    expect(report.level).toBe('high');
+    expect(report.config_used.thresholds).toEqual({ medium: 5, high: 15 });
   });
 });

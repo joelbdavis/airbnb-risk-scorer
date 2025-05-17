@@ -1,10 +1,15 @@
 import { NormalizedReservation } from '../services/getReservationDetails';
 import { getRiskLevel } from './riskLevel';
-import { riskRules, RULE_KEYS, RuleKey } from './riskRules';
+import { ruleRegistry } from './ruleRegistry';
+import { getCurrentConfig } from './config';
+import { RuleId, RULE_IDS, registerAllRules } from './rules';
+
+// Register all rules on module load
+registerAllRules();
 
 // One matched rule with a reference to the key + context
 export interface MatchedRule {
-  name: RuleKey;
+  name: RuleId;
   score: number;
   rationale: string;
 }
@@ -12,33 +17,45 @@ export interface MatchedRule {
 export interface RiskReport {
   score: number;
   level: string;
-  matchedRules: MatchedRule[];
+  matched_rules: MatchedRule[];
+  config_used: {
+    thresholds: {
+      medium: number;
+      high: number;
+    };
+  };
 }
 
 export function calculateRiskScore(
   reservation: NormalizedReservation
 ): RiskReport {
   const { guest } = reservation;
-  const matchedRules: MatchedRule[] = [];
+  const matched_rules: MatchedRule[] = [];
+  const config = getCurrentConfig();
 
-  for (const ruleKey of Object.keys(riskRules) as RuleKey[]) {
-    const rule = riskRules[ruleKey];
-
-    if (rule.applies(guest)) {
-      matchedRules.push({
-        name: ruleKey,
-        score: rule.score,
-        rationale: rule.rationale,
-      });
+  for (const rule of ruleRegistry.getAllRules()) {
+    // Verify the rule ID is a valid RuleId
+    if (Object.values(RULE_IDS).includes(rule.id as RuleId)) {
+      const weight = config.rule_weights[rule.id as RuleId];
+      if (weight?.enabled && rule.applies(guest)) {
+        matched_rules.push({
+          name: rule.id as RuleId,
+          score: weight.score,
+          rationale: rule.rationale,
+        });
+      }
     }
   }
 
-  const score = matchedRules.reduce((sum, rule) => sum + rule.score, 0);
-  const level = getRiskLevel(score);
+  const score = matched_rules.reduce((sum, rule) => sum + rule.score, 0);
+  const level = getRiskLevel(score, config.thresholds);
 
   return {
     score,
     level,
-    matchedRules,
+    matched_rules,
+    config_used: {
+      thresholds: config.thresholds,
+    },
   };
 }
