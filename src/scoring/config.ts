@@ -6,22 +6,22 @@ export interface RiskThresholds {
   high: number;
 }
 
-export interface RuleWeight {
+export interface RuleConfig {
   score: number;
   enabled: boolean;
 }
 
 export interface RiskScoringConfig {
   thresholds: RiskThresholds;
-  rule_weights: Record<RuleId, RuleWeight>;
+  rule_configs: Record<RuleId, RuleConfig>;
 }
 
 // Default configuration built from registered rules
 export function getDefaultConfig(): RiskScoringConfig {
-  const rule_weights: Record<string, RuleWeight> = {};
+  const rule_configs: Record<string, RuleConfig> = {};
 
   for (const rule of ruleRegistry.getAllRules()) {
-    rule_weights[rule.id] = {
+    rule_configs[rule.id] = {
       score: rule.defaultScore,
       enabled: rule.defaultEnabled,
     };
@@ -32,7 +32,7 @@ export function getDefaultConfig(): RiskScoringConfig {
       medium: 30,
       high: 60,
     },
-    rule_weights: rule_weights as Record<RuleId, RuleWeight>,
+    rule_configs: rule_configs as Record<RuleId, RuleConfig>,
   };
 }
 
@@ -51,9 +51,9 @@ export function updateConfig(newConfig: Partial<RiskScoringConfig>): void {
       ...currentConfig.thresholds,
       ...(newConfig.thresholds || {}),
     },
-    rule_weights: {
-      ...currentConfig.rule_weights,
-      ...(newConfig.rule_weights || {}),
+    rule_configs: {
+      ...currentConfig.rule_configs,
+      ...(newConfig.rule_configs || {}),
     },
   };
 }

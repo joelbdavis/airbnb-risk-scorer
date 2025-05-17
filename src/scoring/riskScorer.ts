@@ -34,16 +34,14 @@ export function calculateRiskScore(
   const config = getCurrentConfig();
 
   for (const rule of ruleRegistry.getAllRules()) {
-    // Verify the rule ID is a valid RuleId
-    if (Object.values(RULE_IDS).includes(rule.id as RuleId)) {
-      const weight = config.rule_weights[rule.id as RuleId];
-      if (weight?.enabled && rule.applies(guest)) {
-        matched_rules.push({
-          name: rule.id as RuleId,
-          score: weight.score,
-          rationale: rule.rationale,
-        });
-      }
+    const ruleConfig = config.rule_configs[rule.id as RuleId];
+
+    if (ruleConfig?.enabled && rule.applies(guest)) {
+      matched_rules.push({
+        name: rule.id as RuleId,
+        score: ruleConfig.score,
+        rationale: rule.rationale,
+      });
     }
   }
 

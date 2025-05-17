@@ -80,7 +80,7 @@ describe('Risk Scoring Algorithm', () => {
 
     // Verify score calculation using default weights
     expect(report.score).toBe(
-      getDefaultConfig().rule_weights[RULE_KEYS.NO_TRIPS].score
+      getDefaultConfig().rule_configs[RULE_KEYS.NO_TRIPS].score
     );
     expect(report.level).toBe('low');
   });
@@ -108,9 +108,9 @@ describe('Risk Scoring Algorithm', () => {
     expect(ruleNames).toContain(RULE_KEYS.NO_TRIPS);
 
     // Verify score matches default weights
-    const expectedScore = Object.entries(getDefaultConfig().rule_weights)
+    const expectedScore = Object.entries(getDefaultConfig().rule_configs)
       .filter(([key]) => ruleNames.includes(key as RuleKey))
-      .reduce((sum, [, weight]) => sum + weight.score, 0);
+      .reduce((sum, [, config]) => sum + config.score, 0);
 
     expect(report.score).toBe(expectedScore);
     expect(report.level).toBe('high');
@@ -119,8 +119,8 @@ describe('Risk Scoring Algorithm', () => {
   it('respects disabled rules', () => {
     // Disable the NO_TRIPS rule
     updateConfig({
-      rule_weights: {
-        ...getDefaultConfig().rule_weights,
+      rule_configs: {
+        ...getDefaultConfig().rule_configs,
         [RULE_KEYS.NO_TRIPS]: {
           score: 10,
           enabled: false,
@@ -175,7 +175,7 @@ describe('Risk Scoring Algorithm', () => {
     // With default thresholds this would be medium risk,
     // but with our custom thresholds it should be high
     expect(report.score).toBe(
-      getDefaultConfig().rule_weights[RULE_KEYS.MISSING_EMAIL].score
+      getDefaultConfig().rule_configs[RULE_KEYS.MISSING_EMAIL].score
     );
     expect(report.level).toBe('high');
     expect(report.config_used.thresholds).toEqual({ medium: 5, high: 15 });
