@@ -1,6 +1,6 @@
-import { normalizeGuest } from '../utils/normalizeGuest';
+import { NormalizedReservation } from '../services/getReservationDetails';
 import { getRiskLevel } from './riskLevel';
-import { riskRules, RULE_KEYS, RuleKey, RiskRule } from './riskRules';
+import { riskRules, RULE_KEYS, RuleKey } from './riskRules';
 
 // One matched rule with a reference to the key + context
 export interface MatchedRule {
@@ -15,12 +15,14 @@ export interface RiskReport {
   matchedRules: MatchedRule[];
 }
 
-export function calculateRiskScore(reservation: any): RiskReport {
-  const guest = normalizeGuest(reservation);
+export function calculateRiskScore(
+  reservation: NormalizedReservation
+): RiskReport {
+  const { guest } = reservation;
   const matchedRules: MatchedRule[] = [];
 
   for (const ruleKey of Object.keys(riskRules) as RuleKey[]) {
-    const rule: RiskRule = riskRules[ruleKey];
+    const rule = riskRules[ruleKey];
 
     if (rule.applies(guest)) {
       matchedRules.push({

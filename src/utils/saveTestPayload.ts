@@ -1,8 +1,15 @@
-// utils/saveTestPayload.js
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { ReservationResponse } from '../services/getReservationDetails';
 
-function saveTestPayload(payload, reservationId) {
+interface Payload extends Partial<ReservationResponse> {
+  data?: ReservationResponse[];
+}
+
+export function saveTestPayload(
+  payload: Payload,
+  reservationId?: string
+): void {
   const id = reservationId || 'unknown';
   const fileName = `reservation-${id}.json`;
   const filePath = path.join(__dirname, '..', 'testPayloads', fileName);
@@ -15,8 +22,8 @@ function saveTestPayload(payload, reservationId) {
       console.log(`🔁 Payload for reservation ${id} already exists. Skipping.`);
     }
   } catch (err) {
-    console.error(`❌ Failed to write payload file: ${err.message}`);
+    console.error(
+      `❌ Failed to write payload file: ${err instanceof Error ? err.message : 'Unknown error'}`
+    );
   }
 }
-
-module.exports = { saveTestPayload };

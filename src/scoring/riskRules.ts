@@ -1,7 +1,14 @@
+import { NormalizedReservation } from '../services/getReservationDetails';
+
+type NormalizedGuest = NormalizedReservation['guest'];
+
 export interface RiskRule {
+  /** Points added to risk score if rule matches */
   score: number;
+  /** Human-readable explanation of why this rule increases risk */
   rationale: string;
-  applies: (guest: any) => boolean; // Replace 'any' with Guest type when ready
+  /** Function that determines if this rule applies to a guest */
+  applies: (guest: NormalizedGuest) => boolean;
 }
 
 export const RULE_KEYS = {
@@ -41,16 +48,16 @@ export const riskRules: Record<RuleKey, RiskRule> = {
   [RULE_KEYS.NO_REVIEWS]: {
     score: 30,
     rationale: 'Guest does not have any reviews.',
-    applies: (guest) => guest.tripCount > 0 && guest.reviewCount === 0,
+    applies: (guest) => guest.trip_count > 0 && guest.review_count === 0,
   },
   [RULE_KEYS.NO_TRIPS]: {
     score: 10,
     rationale: 'Guest does not have any trips.',
-    applies: (guest) => guest.tripCount === 0,
+    applies: (guest) => guest.trip_count === 0,
   },
   [RULE_KEYS.NEGATIVE_REVIEWS]: {
     score: 40,
     rationale: 'Guest has negative reviews.',
-    applies: (guest) => guest.hasNegativeReviews,
+    applies: (guest) => guest.has_negative_reviews,
   },
 };
