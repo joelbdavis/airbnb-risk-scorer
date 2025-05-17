@@ -8,7 +8,7 @@ describe('Risk Scoring Algorithm', () => {
         location: 'Christiansburg, VA',
         profile_picture:
           'https://a0.muscache.com/im/pictures/user/User-368436487/original/5031a2bc-df41-4691-8d94-db07ee546628.jpeg?aki_policy=profile_x_medium',
-        email: 'tcallaway@hotmail.com',
+        email: null,
         phone_numbers: ['18644508822'],
         first_name: 'Taylor',
         last_name: 'Callaway',
@@ -16,8 +16,13 @@ describe('Risk Scoring Algorithm', () => {
       },
     };
 
-    const score = calculateRiskScore(reservation);
-    expect(score).toBeLessThanOrEqual(30); // adjust based on your logic
+    const riskReport = calculateRiskScore(reservation);
+    expect(riskReport.score).toBe(25); // adjust based on your logic
+    expect(riskReport.level).toBe('low');
+    expect(Array.isArray(riskReport.rationale)).toBe(true);
+    expect(riskReport.rationale).toHaveLength(2);
+    expect(riskReport.rationale).toContain(`Guest does not have an e-mail.`);
+    expect(riskReport.rationale).toContain(`Guest does not have any trips.`);
   });
 
   it('scores guest with no location, profile picture, email, nor phone number as high risk', () => {
@@ -34,7 +39,21 @@ describe('Risk Scoring Algorithm', () => {
       },
     };
 
-    const score = calculateRiskScore(reservation);
-    expect(score).toBeGreaterThanOrEqual(70);
+    const riskReport = calculateRiskScore(reservation);
+    expect(riskReport.score).toBe(60);
+    expect(riskReport.level).toBe('high');
+    expect(Array.isArray(riskReport.rationale)).toBe(true);
+    expect(riskReport.rationale).toHaveLength(5);
+    expect(riskReport.rationale).toContain(
+      'Guest does not have a location defined.'
+    );
+    expect(riskReport.rationale).toContain(
+      'Guest does not have a profile picture.'
+    );
+    expect(riskReport.rationale).toContain('Guest does not have an e-mail.');
+    expect(riskReport.rationale).toContain(
+      'Guest does not have a phone number.'
+    );
+    expect(riskReport.rationale).toContain('Guest does not have any trips.');
   });
 });
