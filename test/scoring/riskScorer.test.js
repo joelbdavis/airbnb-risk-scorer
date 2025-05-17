@@ -1,4 +1,4 @@
-const { calculateRiskScore } = require('../riskScorer');
+const { calculateRiskScore } = require('../../src/scoring/riskScorer');
 
 describe('Risk Scoring Algorithm', () => {
   it('scores guest with location, profile picture, email, phone number as low risk', () => {

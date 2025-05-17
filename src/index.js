@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
-const { calculateRiskScore } = require('./riskScorer');
-const { getReservationDetails } = require('./getReservationDetails');
+const { calculateRiskScore } = require('./scoring/riskScorer');
+const { getReservationDetails } = require('./services/getReservationDetails');
 const { saveTestPayload } = require('./utils/saveTestPayload');
 
 const app = express();
