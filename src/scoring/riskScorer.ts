@@ -1,11 +1,8 @@
 import { NormalizedReservation } from '../services/getReservationDetails';
 import { getRiskLevel } from './riskLevel';
-import { ruleRegistry } from './ruleRegistry';
 import { getCurrentConfig } from './config';
 import { RuleId, RULE_IDS, registerAllRules } from './rules';
-
-// Register all rules on module load
-registerAllRules();
+import { RuleRegistry } from './ruleRegistry';
 
 // One matched rule with a reference to the key + context
 export interface MatchedRule {
@@ -29,14 +26,32 @@ export interface RiskReport {
 export function calculateRiskScore(
   reservation: NormalizedReservation
 ): RiskReport {
+  // Ensure rules are registered
+  registerAllRules();
+
   const { guest } = reservation;
+  console.log('Calculating risk score for guest:', guest);
+
   const matched_rules: MatchedRule[] = [];
   const config = getCurrentConfig();
+  console.log('Current config:', config);
 
-  for (const rule of ruleRegistry.getAllRules()) {
-    const ruleConfig = config.rule_configs[rule.id as RuleId];
+  const allRules = RuleRegistry.getInstance().getAllRules();
+  console.log(
+    'Available rules:',
+    allRules.map((rule) => rule.id)
+  );
 
-    if (ruleConfig?.enabled && rule.applies(guest)) {
+  for (const rule of allRules) {
+    const ruleConfig = config.rule_configs[rule.id as RuleId] || {
+      score: rule.defaultScore,
+      enabled: rule.defaultEnabled,
+    };
+
+    console.log('Checking rule:', rule.id, 'enabled:', ruleConfig.enabled);
+
+    if (ruleConfig.enabled && rule.applies(guest)) {
+      console.log('Rule matched:', rule.id, 'score:', ruleConfig.score);
       matched_rules.push({
         name: rule.id as RuleId,
         score: ruleConfig.score,
@@ -47,6 +62,15 @@ export function calculateRiskScore(
 
   const score = matched_rules.reduce((sum, rule) => sum + rule.score, 0);
   const level = getRiskLevel(score, config.thresholds);
+
+  console.log(
+    'Final score:',
+    score,
+    'level:',
+    level,
+    'matched rules:',
+    matched_rules
+  );
 
   return {
     score,

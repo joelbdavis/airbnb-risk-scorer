@@ -1,9 +1,12 @@
 import { calculateRiskScore } from '../../src/scoring/riskScorer';
-import { RULE_KEYS } from '../../src/scoring/riskRules';
+import { RULE_IDS, registerAllRules } from '../../src/scoring/rules';
 import type { RiskReport } from '../../src/scoring/riskScorer';
-import type { RuleKey } from '../../src/scoring/riskRules';
+import type { RuleId } from '../../src/scoring/rules';
+import type { RuleConfig } from '../../src/scoring/config';
 import type { NormalizedReservation } from '../../src/services/getReservationDetails';
 import { updateConfig, getDefaultConfig } from '../../src/scoring/config';
+import { RuleRegistry } from '../../src/scoring/ruleRegistry';
+import { setupRiskScoringTest, teardownRiskScoringTest } from '../testUtils';
 
 describe('Risk Scoring Algorithm', () => {
   const baseReservation: NormalizedReservation = {
@@ -55,8 +58,15 @@ describe('Risk Scoring Algorithm', () => {
   };
 
   beforeEach(() => {
-    // Reset to default configuration before each test
+    setupRiskScoringTest();
+    // Reset rule registry and config before each test
+    RuleRegistry.resetInstance();
+    registerAllRules(); // Register rules after resetting
     updateConfig(getDefaultConfig());
+  });
+
+  afterEach(() => {
+    teardownRiskScoringTest();
   });
 
   it('matches expected rules for low-risk guest', () => {
@@ -68,19 +78,21 @@ describe('Risk Scoring Algorithm', () => {
         profile_picture: true,
         phone_numbers: ['18644508822'],
         email: 'test@example.com',
+        trip_count: 0,
+        review_count: 0,
       },
     };
 
     const report: RiskReport = calculateRiskScore(reservation);
 
     // Only NO_TRIPS should match
-    const ruleNames: RuleKey[] = report.matched_rules.map((r) => r.name);
+    const ruleNames: RuleId[] = report.matched_rules.map((r) => r.name);
     expect(ruleNames).toHaveLength(1);
-    expect(ruleNames).toContain(RULE_KEYS.NO_TRIPS);
+    expect(ruleNames).toContain(RULE_IDS.NO_TRIPS);
 
     // Verify score calculation using default weights
     expect(report.score).toBe(
-      getDefaultConfig().rule_configs[RULE_KEYS.NO_TRIPS].score
+      getDefaultConfig().rule_configs[RULE_IDS.NO_TRIPS].score
     );
     expect(report.level).toBe('low');
   });
@@ -101,15 +113,15 @@ describe('Risk Scoring Algorithm', () => {
 
     // Should match multiple risk rules
     const ruleNames = report.matched_rules.map((r) => r.name);
-    expect(ruleNames).toContain(RULE_KEYS.MISSING_LOCATION);
-    expect(ruleNames).toContain(RULE_KEYS.NO_PROFILE_PICTURE);
-    expect(ruleNames).toContain(RULE_KEYS.MISSING_EMAIL);
-    expect(ruleNames).toContain(RULE_KEYS.MISSING_PHONE);
-    expect(ruleNames).toContain(RULE_KEYS.NO_TRIPS);
+    expect(ruleNames).toContain(RULE_IDS.MISSING_LOCATION);
+    expect(ruleNames).toContain(RULE_IDS.NO_PROFILE_PICTURE);
+    expect(ruleNames).toContain(RULE_IDS.MISSING_EMAIL);
+    expect(ruleNames).toContain(RULE_IDS.MISSING_PHONE);
+    expect(ruleNames).toContain(RULE_IDS.NO_TRIPS);
 
     // Verify score matches default weights
     const expectedScore = Object.entries(getDefaultConfig().rule_configs)
-      .filter(([key]) => ruleNames.includes(key as RuleKey))
+      .filter(([key]) => ruleNames.includes(key as RuleId))
       .reduce((sum, [, config]) => sum + config.score, 0);
 
     expect(report.score).toBe(expectedScore);
@@ -118,14 +130,17 @@ describe('Risk Scoring Algorithm', () => {
 
   it('respects disabled rules', () => {
     // Disable the NO_TRIPS rule
-    updateConfig({
-      rule_configs: {
-        ...getDefaultConfig().rule_configs,
-        [RULE_KEYS.NO_TRIPS]: {
-          score: 10,
-          enabled: false,
-        },
+    const defaultConfig = getDefaultConfig();
+    const ruleConfigs = {
+      ...defaultConfig.rule_configs,
+      [RULE_IDS.NO_TRIPS]: {
+        score: 10,
+        enabled: false,
       },
+    };
+
+    updateConfig({
+      rule_configs: ruleConfigs,
     });
 
     const reservation: NormalizedReservation = {
@@ -136,6 +151,8 @@ describe('Risk Scoring Algorithm', () => {
         profile_picture: true,
         phone_numbers: ['18644508822'],
         email: 'test@example.com',
+        trip_count: 0,
+        review_count: 0,
       },
     };
 
@@ -149,11 +166,14 @@ describe('Risk Scoring Algorithm', () => {
   });
 
   it('uses custom thresholds', () => {
-    // Set very low thresholds
+    // Set thresholds so that:
+    // 0-14: low risk
+    // 15-29: medium risk
+    // 30+: high risk
     updateConfig({
       thresholds: {
-        medium: 5,
-        high: 15,
+        medium: 15,
+        high: 30,
       },
     });
 
@@ -172,12 +192,69 @@ describe('Risk Scoring Algorithm', () => {
 
     const report = calculateRiskScore(reservation);
 
-    // With default thresholds this would be medium risk,
-    // but with our custom thresholds it should be high
+    // With default thresholds this would be low risk,
+    // but with our custom thresholds it should be medium
     expect(report.score).toBe(
-      getDefaultConfig().rule_configs[RULE_KEYS.MISSING_EMAIL].score
+      getDefaultConfig().rule_configs[RULE_IDS.MISSING_EMAIL].score
     );
+    expect(report.level).toBe('medium');
+    expect(report.config_used.thresholds).toEqual({ medium: 15, high: 30 });
+  });
+
+  it('correctly handles review and trip count relationships', () => {
+    const reservation: NormalizedReservation = {
+      ...baseReservation,
+      guest: {
+        ...baseReservation.guest,
+        location: 'Christiansburg, VA',
+        profile_picture: true,
+        phone_numbers: ['18644508822'],
+        email: 'test@example.com',
+        trip_count: 3,
+        review_count: 0,
+      },
+    };
+
+    const report = calculateRiskScore(reservation);
+
+    // Should match NO_REVIEWS since there are trips but no reviews
+    const ruleNames = report.matched_rules.map((r) => r.name);
+    expect(ruleNames).toContain(RULE_IDS.NO_REVIEWS);
+    expect(report.score).toBe(
+      getDefaultConfig().rule_configs[RULE_IDS.NO_REVIEWS].score
+    );
+  });
+
+  it('handles negative reviews with other risk factors', () => {
+    const reservation: NormalizedReservation = {
+      ...baseReservation,
+      guest: {
+        ...baseReservation.guest,
+        location: null,
+        profile_picture: false,
+        has_negative_reviews: true,
+        trip_count: 5,
+        review_count: 3,
+      },
+    };
+
+    const report = calculateRiskScore(reservation);
+
+    // Should match NEGATIVE_REVIEWS, MISSING_LOCATION, and NO_PROFILE_PICTURE
+    const ruleNames = report.matched_rules.map((r) => r.name);
+    expect(ruleNames).toContain(RULE_IDS.NEGATIVE_REVIEWS);
+    expect(ruleNames).toContain(RULE_IDS.MISSING_LOCATION);
+    expect(ruleNames).toContain(RULE_IDS.NO_PROFILE_PICTURE);
+
+    // Calculate expected score
+    const expectedScore =
+      getDefaultConfig().rule_configs[RULE_IDS.NEGATIVE_REVIEWS].score +
+      getDefaultConfig().rule_configs[RULE_IDS.MISSING_LOCATION].score +
+      getDefaultConfig().rule_configs[RULE_IDS.NO_PROFILE_PICTURE].score +
+      getDefaultConfig().rule_configs[RULE_IDS.MISSING_EMAIL].score +
+      getDefaultConfig().rule_configs[RULE_IDS.MISSING_PHONE].score;
+
+    expect(report.score).toBe(expectedScore);
     expect(report.level).toBe('high');
-    expect(report.config_used.thresholds).toEqual({ medium: 5, high: 15 });
   });
 });

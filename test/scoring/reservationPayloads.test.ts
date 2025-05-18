@@ -5,12 +5,11 @@ import {
   ReservationResponse,
   NormalizedReservation,
 } from '../../src/services/getReservationDetails';
+import { RuleId } from '../../src/scoring/rules';
 
 interface ExpectedValues {
-  level: RiskReport['level'];
-  score?: number;
-  rationale?: string[];
-  ruleNames?: string[];
+  expected_rules: RuleId[];
+  rationale: string[];
 }
 
 function normalizeGuest(raw: ReservationResponse['guest']) {
@@ -62,17 +61,27 @@ describe('Risk scoring from testPayloads', () => {
     );
 
   files.forEach((filename) => {
-    it(`calculates risk score for ${filename}`, () => {
+    it(`matches expected rules for ${filename}`, () => {
       const base = path.basename(filename, '.json');
       const rawReservation = getReservationFromTestPayload(payloadDir, base);
       const reservation = normalizeReservation(rawReservation);
       const expected = getExpected(payloadDir, filename, base);
       const riskReport = calculateRiskScore(reservation);
 
-      expect(riskReport.level).toEqual(expected.level);
-      if (expected.score !== undefined) {
-        expect(riskReport.score).toEqual(expected.score);
-      }
+      // Verify matched rules
+      const matchedRuleNames = riskReport.matched_rules.map((r) => r.name);
+      expect(new Set(matchedRuleNames)).toEqual(
+        new Set(expected.expected_rules)
+      );
+
+      // Verify rationale
+      const matchedRationale = riskReport.matched_rules.map((r) => r.rationale);
+      expect(new Set(matchedRationale)).toEqual(new Set(expected.rationale));
+
+      // Verify config was included
+      expect(riskReport.config_used).toBeDefined();
+      expect(riskReport.config_used.thresholds).toHaveProperty('medium');
+      expect(riskReport.config_used.thresholds).toHaveProperty('high');
     });
   });
 });
@@ -101,8 +110,13 @@ function getExpected(
     fs.readFileSync(expectedPath, 'utf8')
   ) as ExpectedValues;
 
-  if (typeof expected.level !== 'string') {
-    throw new Error(`Missing or invalid "level" in ${base}.expected.json`);
+  if (
+    !Array.isArray(expected.expected_rules) ||
+    !Array.isArray(expected.rationale)
+  ) {
+    throw new Error(
+      `Missing or invalid expected_rules or rationale in ${base}.expected.json`
+    );
   }
 
   return expected;

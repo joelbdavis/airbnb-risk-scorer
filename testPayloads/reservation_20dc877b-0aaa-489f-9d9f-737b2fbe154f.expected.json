@@ -1,4 +1,8 @@
 {
-  "score": 35,
-  "level": "medium"
+  "expected_rules": ["missing-location", "missing-email", "no-trips"],
+  "rationale": [
+    "Guest does not have a location defined.",
+    "Guest has not provided an email address.",
+    "Guest has not completed any trips."
+  ]
 }

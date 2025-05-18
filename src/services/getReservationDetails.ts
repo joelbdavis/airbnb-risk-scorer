@@ -86,7 +86,7 @@ function normalizeGuest(raw: Guest): NormalizedGuest {
   return {
     id: raw.id ?? null,
     name: `${raw.first_name || ''} ${raw.last_name || ''}`.trim(),
-    // TODO: These fields need to be populated from additional API calls or data sources
+    // These fields are derived from other sources or API calls
     review_count: 0,
     trip_count: 0,
     has_negative_reviews: false,

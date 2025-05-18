@@ -19,14 +19,26 @@ export interface RiskRule {
   category?: 'identity' | 'contact' | 'reputation';
 }
 
-class RuleRegistry {
+export class RuleRegistry {
+  private static instance: RuleRegistry | null = null;
   private rules: Map<string, RiskRule> = new Map();
 
-  registerRule(rule: RiskRule): void {
-    if (this.rules.has(rule.id)) {
-      throw new Error(`Rule with id ${rule.id} is already registered`);
+  private constructor() {
+    console.log('Creating new RuleRegistry instance');
+  }
+
+  static getInstance(): RuleRegistry {
+    if (!RuleRegistry.instance) {
+      console.log('Creating singleton RuleRegistry instance');
+      RuleRegistry.instance = new RuleRegistry();
     }
+    return RuleRegistry.instance;
+  }
+
+  registerRule(rule: RiskRule): void {
+    console.log('Registering rule:', rule.id);
     this.rules.set(rule.id, rule);
+    console.log('Rule registered successfully:', rule.id);
   }
 
   getRule(id: string): RiskRule | undefined {
@@ -34,13 +46,28 @@ class RuleRegistry {
   }
 
   getAllRules(): RiskRule[] {
-    return Array.from(this.rules.values());
+    const rules = Array.from(this.rules.values());
+    console.log(
+      'Getting all rules:',
+      rules.map((r) => r.id)
+    );
+    return rules;
   }
 
   getRulesByCategory(category: string): RiskRule[] {
     return this.getAllRules().filter((rule) => rule.category === category);
   }
+
+  clearRules(): void {
+    console.log('Clearing all rules');
+    this.rules.clear();
+  }
+
+  static resetInstance(): void {
+    console.log('Resetting RuleRegistry instance');
+    RuleRegistry.instance = null;
+  }
 }
 
-// Singleton instance
-export const ruleRegistry = new RuleRegistry();
+// Get the singleton instance
+export const ruleRegistry = RuleRegistry.getInstance();

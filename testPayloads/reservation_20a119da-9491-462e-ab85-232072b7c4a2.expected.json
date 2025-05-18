@@ -1,4 +1,9 @@
 {
   "score": 25,
-  "level": "low"
+  "level": "low",
+  "expected_rules": ["missing-email", "no-trips"],
+  "rationale": [
+    "Guest has not provided an email address.",
+    "Guest has not completed any trips."
+  ]
 }

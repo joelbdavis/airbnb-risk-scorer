@@ -1,4 +1,4 @@
-import { ruleRegistry } from '../ruleRegistry';
+import { RuleRegistry } from '../ruleRegistry';
 import { missingLocationRule } from './missingLocation';
 import { noProfilePictureRule } from './noProfilePicture';
 import { missingEmailRule } from './missingEmail';
@@ -9,13 +9,35 @@ import { negativeReviewsRule } from './negativeReviews';
 
 // Register all rules
 export function registerAllRules(): void {
-  ruleRegistry.registerRule(missingLocationRule);
-  ruleRegistry.registerRule(noProfilePictureRule);
-  ruleRegistry.registerRule(missingEmailRule);
-  ruleRegistry.registerRule(missingPhoneRule);
-  ruleRegistry.registerRule(noReviewsRule);
-  ruleRegistry.registerRule(noTripsRule);
-  ruleRegistry.registerRule(negativeReviewsRule);
+  console.log('Registering all rules...');
+  const registry = RuleRegistry.getInstance();
+
+  console.log(
+    'Before registration, rules:',
+    registry.getAllRules().map((r) => r.id)
+  );
+
+  registry.registerRule(missingLocationRule);
+  registry.registerRule(noProfilePictureRule);
+  registry.registerRule(missingEmailRule);
+  registry.registerRule(missingPhoneRule);
+  registry.registerRule(noReviewsRule);
+  registry.registerRule(noTripsRule);
+  registry.registerRule(negativeReviewsRule);
+
+  console.log(
+    'After registration, rules:',
+    registry.getAllRules().map((r) => r.id)
+  );
+  console.log(
+    'Rule details:',
+    registry.getAllRules().map((r) => ({
+      id: r.id,
+      score: r.defaultScore,
+      enabled: r.defaultEnabled,
+      applies: r.applies.toString(),
+    }))
+  );
 }
 
 // Export rule IDs as constants
