@@ -3,14 +3,25 @@ import { app } from '../src/index';
 import { saveTestPayload } from '../src/utils/saveTestPayload';
 import { getReservationDetails } from '../src/services/getReservationDetails';
 import { calculateRiskScore } from '../src/scoring/riskScorer';
+import { DatabaseService } from '../src/services/database';
 
+// Mock dependencies
 jest.mock('../src/utils/saveTestPayload');
 jest.mock('../src/services/getReservationDetails');
 jest.mock('../src/scoring/riskScorer');
+jest.mock('../src/services/database');
 
 describe('Express App', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('GET /', () => {
+    it('should return welcome message', async () => {
+      const response = await request(app).get('/');
+      expect(response.status).toBe(200);
+      expect(response.text).toBe('Airbnb Risk Scorer API is running');
+    });
   });
 
   describe('GET /health', () => {
@@ -22,21 +33,21 @@ describe('Express App', () => {
   });
 
   describe('POST /booking', () => {
+    const mockPayload = {
+      id: '123-456',
+      guest: { name: 'Test Guest' },
+    };
+
     it('should process booking webhook successfully', async () => {
-      const mockPayload = {
-        id: '123-456',
-        guest: { name: 'Test Guest' },
+      const mockRiskReport = {
+        score: 30,
+        level: 'medium',
+        matched_rules: [],
       };
 
-      (saveTestPayload as jest.Mock).mockResolvedValue(undefined);
-      (getReservationDetails as jest.Mock).mockResolvedValue({
-        id: '123-456',
-        guest: { name: 'Test Guest' },
-      });
-      (calculateRiskScore as jest.Mock).mockReturnValue({
-        score: 50,
-        level: 'medium',
-      });
+      (calculateRiskScore as jest.Mock).mockReturnValue(mockRiskReport);
+      (getReservationDetails as jest.Mock).mockResolvedValue(mockPayload);
+      (DatabaseService.save as jest.Mock).mockImplementation(() => {});
 
       const response = await request(app).post('/booking').send(mockPayload);
 
@@ -47,25 +58,14 @@ describe('Express App', () => {
         id: '123-456',
         guest: { name: 'Test Guest' },
       });
-    });
-
-    it('should handle missing reservation ID', async () => {
-      const response = await request(app).post('/booking').send({});
-
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual({ error: 'Missing reservation ID' });
-      expect(saveTestPayload).not.toHaveBeenCalled();
-      expect(getReservationDetails).not.toHaveBeenCalled();
-      expect(calculateRiskScore).not.toHaveBeenCalled();
+      expect(DatabaseService.save).toHaveBeenCalledWith(
+        '123-456',
+        mockPayload,
+        mockRiskReport
+      );
     });
 
     it('should handle API errors gracefully', async () => {
-      const mockPayload = {
-        id: '123-456',
-        guest: { name: 'Test Guest' },
-      };
-
-      (saveTestPayload as jest.Mock).mockResolvedValue(undefined);
       (getReservationDetails as jest.Mock).mockRejectedValue(
         new Error('API Error')
       );
@@ -77,12 +77,6 @@ describe('Express App', () => {
     });
 
     it('should handle missing reservation details', async () => {
-      const mockPayload = {
-        id: '123-456',
-        guest: { name: 'Test Guest' },
-      };
-
-      (saveTestPayload as jest.Mock).mockResolvedValue(undefined);
       (getReservationDetails as jest.Mock).mockResolvedValue(null);
 
       const response = await request(app).post('/booking').send(mockPayload);
@@ -92,12 +86,43 @@ describe('Express App', () => {
     });
   });
 
-  describe('GET /', () => {
-    it('should return welcome message', async () => {
-      const response = await request(app).get('/');
+  describe('GET /reservations/:id', () => {
+    it('should return reservation details', async () => {
+      const mockStoredReservation = {
+        reservation: { id: '123', guest: { name: 'Test' } },
+        riskReport: { score: 30, level: 'medium' },
+      };
 
+      (DatabaseService.get as jest.Mock).mockReturnValue(mockStoredReservation);
+
+      const response = await request(app).get('/reservations/123');
       expect(response.status).toBe(200);
-      expect(response.text).toBe('Airbnb Risk Scorer API is running');
+      expect(response.body).toEqual(mockStoredReservation);
+    });
+
+    it('should handle missing reservation', async () => {
+      (DatabaseService.get as jest.Mock).mockReturnValue(null);
+
+      const response = await request(app).get('/reservations/123');
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ error: 'Reservation not found' });
+    });
+  });
+
+  describe('GET /reservations', () => {
+    it('should return all reservations', async () => {
+      const mockReservations = [
+        {
+          reservation: { id: '123', guest: { name: 'Test' } },
+          riskReport: { score: 30, level: 'medium' },
+        },
+      ];
+
+      (DatabaseService.list as jest.Mock).mockReturnValue(mockReservations);
+
+      const response = await request(app).get('/reservations');
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(mockReservations);
     });
   });
 

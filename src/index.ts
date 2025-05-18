@@ -92,54 +92,33 @@ const handleBookingWebhook: RequestHandler = async (req, res, next) => {
     // Save the raw payload
     await saveTestPayload(req.body, reservationId);
 
-    // Create a normalized reservation from the webhook payload
-    const normalizedReservation: NormalizedReservation = {
-      id: req.body.id,
-      code: req.body.code,
-      platform: req.body.platform,
-      platform_id: req.body.platform_id,
-      booking_date: req.body.booking_date,
-      arrival_date: req.body.arrival_date,
-      departure_date: req.body.departure_date,
-      check_in: req.body.check_in,
-      check_out: req.body.check_out,
-      nights: req.body.nights,
-      guests: req.body.guests,
-      guest: {
-        id: req.body.guest.id,
-        name: req.body.guest.name,
-        review_count: req.body.guest.review_count,
-        trip_count: req.body.guest.trip_count,
-        has_negative_reviews: req.body.guest.has_negative_reviews,
-        profile_picture: req.body.guest.profile_picture,
-        phone_numbers: req.body.guest.phone_numbers,
-        email: req.body.guest.email,
-        location: req.body.guest.location,
-        language: req.body.guest.language,
-      },
-      status: req.body.status,
-      status_history: req.body.status_history,
-      conversation_id: req.body.conversation_id,
-      last_message_at: req.body.last_message_at,
-      reservation_status: {
-        current: {
-          category: 'accepted',
-          sub_category: null,
-        },
-        history: [],
-      },
-    };
+    try {
+      // Get reservation details
+      const normalizedReservation = await getReservationDetails(reservationId);
 
-    // Calculate risk score
-    const riskReport = calculateRiskScore(normalizedReservation);
+      if (!normalizedReservation) {
+        res.status(404).json({
+          error: 'Reservation not found',
+        });
+        return;
+      }
 
-    // Save to local store
-    reservationStore.save(reservationId, normalizedReservation, riskReport);
+      // Calculate risk score
+      const riskReport = calculateRiskScore(normalizedReservation);
 
-    res.status(200).json({
-      reservation_id: reservationId,
-      ...riskReport,
-    });
+      // Save to database
+      reservationStore.save(reservationId, normalizedReservation, riskReport);
+
+      res.status(200).json({
+        reservation_id: reservationId,
+        ...riskReport,
+      });
+    } catch (error) {
+      console.error('Error processing reservation:', error);
+      res.status(500).json({
+        error: 'Server error',
+      });
+    }
   } catch (error) {
     next(error instanceof Error ? error : new Error('Unknown error'));
   }

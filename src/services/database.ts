@@ -1,10 +1,22 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 import { NormalizedReservation } from './getReservationDetails';
 import { RiskReport } from '../scoring/riskScorer';
 
 // Define the database file path
-const DB_PATH = path.join(process.cwd(), 'data', 'reservations.db');
+const DB_PATH =
+  process.env.NODE_ENV === 'test'
+    ? ':memory:'
+    : path.join(process.cwd(), 'data', 'reservations.db');
+
+// Ensure data directory exists for non-test environments
+if (process.env.NODE_ENV !== 'test' && DB_PATH !== ':memory:') {
+  const dataDir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+}
 
 // Initialize database
 const db = new Database(DB_PATH);
