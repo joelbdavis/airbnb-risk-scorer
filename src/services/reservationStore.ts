@@ -1,35 +1,23 @@
-import type { NormalizedReservation } from './getReservationDetails';
-import type { RiskReport } from '../scoring/riskScorer';
+import { NormalizedReservation } from './getReservationDetails';
+import { RiskReport } from '../scoring/riskScorer';
+import { DatabaseService, StoredReservation } from './database';
 
-interface StoredReservation {
-  reservation: NormalizedReservation;
-  riskReport: RiskReport;
-  createdAt: Date;
-}
-
-// In-memory store for development
-const reservations = new Map<string, StoredReservation>();
-
-export const reservationStore = {
-  save: (
-    id: string,
+class ReservationStore {
+  save(
+    reservationId: string,
     reservation: NormalizedReservation,
     riskReport: RiskReport
-  ) => {
-    reservations.set(id, {
-      reservation,
-      riskReport,
-      createdAt: new Date(),
-    });
-  },
+  ): void {
+    DatabaseService.save(reservationId, reservation, riskReport);
+  }
 
-  get: (id: string): StoredReservation | undefined => {
-    return reservations.get(id);
-  },
+  get(id: string): StoredReservation | null {
+    return DatabaseService.get(id);
+  }
 
-  list: (): StoredReservation[] => {
-    return Array.from(reservations.values()).sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-    );
-  },
-};
+  list(): StoredReservation[] {
+    return DatabaseService.list();
+  }
+}
+
+export const reservationStore = new ReservationStore();
