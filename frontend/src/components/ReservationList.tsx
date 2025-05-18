@@ -10,7 +10,7 @@ const RISK_LEVEL_COLORS = {
 interface ReservationListProps {
   reservations: StoredReservation[];
   onSelect: (reservation: StoredReservation) => void;
-  selectedId?: string;
+  selectedId?: string | undefined;
   loading?: boolean;
 }
 
@@ -24,7 +24,7 @@ export function ReservationList({
     return (
       <Paper p="md" radius="md">
         <Title order={2} mb={rem(16)}>
-          Webhook Reservations
+          Reservations
         </Title>
         <Loader />
       </Paper>
@@ -35,9 +35,11 @@ export function ReservationList({
     return (
       <Paper p="md" radius="md">
         <Title order={2} mb={rem(16)}>
-          Webhook Reservations
+          Reservations
         </Title>
-        <Text>No reservations received yet. Waiting for webhook events...</Text>
+        <Text>
+          No reservations yet. Click "+ New Reservation" to add one manually.
+        </Text>
       </Paper>
     );
   }
@@ -45,7 +47,7 @@ export function ReservationList({
   return (
     <Paper p="md" radius="md">
       <Title order={2} mb={rem(16)}>
-        Webhook Reservations
+        Reservations
       </Title>
       <Table>
         <Table.Thead>

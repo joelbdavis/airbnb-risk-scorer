@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { MantineProvider, Stack, Text, rem, Button } from '@mantine/core';
+import {
+  MantineProvider,
+  Stack,
+  Text,
+  rem,
+  Button,
+  Group,
+  Title,
+} from '@mantine/core';
 import { MainAppShell } from './components/AppShell';
 import { GuestDataForm } from './components/GuestDataForm';
 import { RiskScoreDisplay } from './components/RiskScoreDisplay';
@@ -33,6 +41,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     // Fetch existing reservations on mount
@@ -64,41 +73,67 @@ function App() {
   const handleGuestSubmit = async (guestData: NormalizedGuest) => {
     setLoading(true);
     try {
-      // Update the existing reservation
-      const response = await fetchWithTimeout(
-        `http://localhost:3000/reservations/${selectedReservation?.reservation.id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            guest: guestData,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to update guest data');
+      let response;
+      if (isCreating) {
+        // Create new reservation
+        response = await fetchWithTimeout(
+          'http://localhost:3000/reservations',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              guest: guestData,
+            }),
+          }
+        );
+      } else {
+        // Update existing reservation
+        response = await fetchWithTimeout(
+          `http://localhost:3000/reservations/${selectedReservation?.reservation.id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              guest: guestData,
+            }),
+          }
+        );
       }
 
-      const updatedReservation: StoredReservation = await response.json();
-      setReservations((prev) =>
-        prev.map((r) =>
-          r.reservation.id === updatedReservation.reservation.id
-            ? updatedReservation
-            : r
-        )
-      );
-      setSelectedReservation(updatedReservation);
+      if (!response.ok) {
+        throw new Error(
+          isCreating
+            ? 'Failed to create reservation'
+            : 'Failed to update guest data'
+        );
+      }
+
+      const data: StoredReservation = await response.json();
+
+      if (isCreating) {
+        setReservations((prev) => [...prev, data]);
+      } else {
+        setReservations((prev) =>
+          prev.map((r) => (r.reservation.id === data.reservation.id ? data : r))
+        );
+      }
+
+      setSelectedReservation(data);
       setIsEditing(false);
+      setIsCreating(false);
       setError(null);
     } catch (err) {
-      console.error('Error updating guest data:', err);
+      console.error('Error saving guest data:', err);
       setError(
         err instanceof Error && err.name === 'AbortError'
           ? 'Request timed out. Please try again.'
-          : 'Failed to update guest data'
+          : isCreating
+            ? 'Failed to create reservation'
+            : 'Failed to update guest data'
       );
     } finally {
       setLoading(false);
@@ -108,6 +143,7 @@ function App() {
   const handleBackToList = () => {
     setSelectedReservation(null);
     setIsEditing(false);
+    setIsCreating(false);
   };
 
   return (
@@ -120,34 +156,46 @@ function App() {
             </Text>
           )}
 
-          {selectedReservation ? (
+          {selectedReservation || isCreating ? (
             <>
               <Button onClick={handleBackToList} variant="subtle" size="sm">
                 ← Back to Reservations
               </Button>
-              {isEditing ? (
+              {isEditing || isCreating ? (
                 <GuestDataForm
                   onSubmit={handleGuestSubmit}
                   disabled={loading}
-                  initialData={selectedReservation.reservation.guest}
-                  onCancel={() => setIsEditing(false)}
+                  initialData={
+                    isCreating || !selectedReservation
+                      ? undefined
+                      : selectedReservation.reservation.guest
+                  }
+                  onCancel={handleBackToList}
                 />
-              ) : (
+              ) : selectedReservation ? (
                 <>
                   <RiskScoreDisplay report={selectedReservation.riskReport} />
                   <Button onClick={() => setIsEditing(true)} disabled={loading}>
                     Edit Guest Details
                   </Button>
                 </>
-              )}
+              ) : null}
             </>
           ) : (
-            <ReservationList
-              reservations={reservations}
-              onSelect={setSelectedReservation}
-              selectedId={selectedReservation?.reservation.id}
-              loading={loading}
-            />
+            <>
+              <Group justify="space-between" align="center">
+                <Title order={2}>Reservations</Title>
+                <Button onClick={() => setIsCreating(true)} disabled={loading}>
+                  + New Reservation
+                </Button>
+              </Group>
+              <ReservationList
+                reservations={reservations}
+                onSelect={setSelectedReservation}
+                selectedId={selectedReservation?.reservation.id}
+                loading={loading}
+              />
+            </>
           )}
         </Stack>
       </MainAppShell>
