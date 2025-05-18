@@ -12,7 +12,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/index.ts",
-    "test": "jest"
+    "test": "jest",
+    "load-test-data": "ts-node scripts/loadTestData.ts"
   },
   "devDependencies": {
     "@eslint/css": "^0.8.1",
